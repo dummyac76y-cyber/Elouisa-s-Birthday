@@ -180,13 +180,19 @@ h1{font-size:clamp(2.2rem,min(11vw,15vh),5.2rem)}
     <p class="hint">Write a wish and send it into the night sky</p>
     <div id="lsky"></div>
     <div class="lrow"><input id="lw" maxlength="60" placeholder="Type your wish here" autocomplete="off"><button class="btn" id="lb2">Send lantern</button></div>
+    <p id="lstatus" class="hint" role="status" aria-live="polite" style="margin:12px 0 0"></p>
   </div>
 </div>
 </main>
 <footer>Made with love for Elouisa Mae</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const supabaseConfig = window.__SUPABASE_CONFIG__ || {url:'',key:''};
+const supabaseClient = supabaseConfig.url && supabaseConfig.key ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.key) : null;
+const WISH_TABLE = 'birthday_wishes';
+
 const $=id=>document.getElementById(id);
 /* ---------- particle engine: fireworks, confetti, pops ---------- */
 const cv=$('fx'),cx=cv.getContext('2d');let R=[],P=[],run=false;
@@ -286,12 +292,12 @@ $('prev').onclick=()=>{if(cur>0)pg[--cur].classList.remove('f')};
 const G=['This year you will find a book that feels like home.','A purple sunrise is waiting to greet you.','Someone will finally return your borrowed book. Miracles happen!','Big joy is coming, wrapped in small surprises.','You will laugh so hard this year that you lose track of time.'];
 document.querySelectorAll('#gems button').forEach(b=>b.onclick=e=>{$('gem').textContent=G[Math.random()*G.length|0];confetti(e.clientX,e.clientY,50)});
 /* ---------- wish lanterns ---------- */
-const ls=$('lsky');
-function lantern(){const i=$('lw'),v=i.value.trim();if(!v){i.focus();i.placeholder='Type your wish first';return}
- const e=document.createElement('div');e.className='ln';e.style.left=(8+Math.random()*Math.max(0,ls.clientWidth-130))+'px';e.style.setProperty('--dy',-(ls.clientHeight+220)+'px');
- e.innerHTML='<div><svg viewBox="0 0 40 56" width="46" height="64"><use href="#ic-lantern"/></svg><span></span></div>';e.querySelector('span').textContent=v;
- ls.appendChild(e);e.addEventListener('animationend',ev=>{if(ev.animationName==='rise')e.remove()});i.value='';const r=ls.getBoundingClientRect();boom(r.left+r.width/2,r.top+r.height*.75,[252,211,77],60)}
-$('lb2').onclick=lantern;$('lw').addEventListener('keydown',e=>{if(e.key==='Enter')lantern()});
+const ls=$('lsky'), lstatus=$('lstatus');
+function renderLantern(v, animate=true){const e=document.createElement('div');e.className='ln';e.style.left=(8+Math.random()*Math.max(0,ls.clientWidth-130))+'px';e.style.setProperty('--dy',-(ls.clientHeight+220)+'px');if(!animate)e.style.animation='none';
+ e.innerHTML='<div><svg viewBox="0 0 40 56" width="46" height="64"><use href="#ic-lantern"/></svg><span></span></div>';e.querySelector('span').textContent=v;ls.appendChild(e);if(animate)e.addEventListener('animationend',ev=>{if(ev.animationName==='rise')e.remove()})}
+async function loadWishes(){if(!supabaseClient){lstatus.textContent='Lantern sharing is not configured yet.';return}const {data,error}=await supabaseClient.from(WISH_TABLE).select('wish').order('created_at',{ascending:true}).limit(100);if(error){lstatus.textContent='Wishes will appear here once the lantern table is enabled.';return}data.forEach(({wish})=>renderLantern(wish,false));lstatus.textContent=data.length?'Shared wishes from every device':'Be the first to send a wish'}
+async function lantern(){const i=$('lw'),v=i.value.trim();if(!v){i.focus();i.placeholder='Type your wish first';return}if(!supabaseClient){lstatus.textContent='Lantern sharing is not configured yet.';return}const {error}=await supabaseClient.from(WISH_TABLE).insert({wish:v});if(error){lstatus.textContent='Could not save this wish. Please try again.';return}renderLantern(v);i.value='';lstatus.textContent='Your wish is now visible on every device.';const r=ls.getBoundingClientRect();boom(r.left+r.width/2,r.top+r.height*.75,[252,211,77],60)}
+$('lb2').onclick=lantern;$('lw').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.keyCode!==229)lantern()});loadWishes();
 /* ---------- story intro ---------- */
 const CH=[['ONCE UPON A TIME','In a world full of stories, there lived a girl named Elouisa Mae.','ic-book'],
 ['CHAPTER ONE','She has a way of turning ordinary days into chapters worth reading.','ic-spark'],

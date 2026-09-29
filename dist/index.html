@@ -189,7 +189,10 @@ h1{font-size:clamp(2.2rem,min(11vw,15vh),5.2rem)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const supabaseConfig = typeof __SUPABASE_CONFIG__ !== 'undefined' ? __SUPABASE_CONFIG__ : {url:'',key:''};
+const supabaseConfig = {
+  url: '%NEXT_PUBLIC_SUPABASE_URL%',
+  key: '%NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY%',
+};
 const supabaseClient = supabaseConfig.url && supabaseConfig.key ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.key) : null;
 const WISH_TABLE = 'birthday_wishes';
 
